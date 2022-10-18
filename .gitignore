@@ -1,0 +1,6 @@
+target/
+dist/
+data/
+.env
+Cargo.lock
+.DS_Store

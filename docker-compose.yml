@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:alpine
+    restart: always
+    container_name: postgres
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: user
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - data-postgres:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+  rusty-finance:
+    image: rusty-finance:latest
+    container_name: rusty-finance
+    restart: always
+    ports:
+      - 8080:8080
+    environment:
+      DATABSE_URL: postgres://user:password@host/user
+      LISTEN_ADDRESS: 0.0.0.0
+      PORT: 8080
+      RUST_LOG: debug
