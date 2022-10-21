@@ -104,13 +104,13 @@ impl TryFrom<StringRecord> for CsvRow {
             .unwrap_or_default();
         let balance = record
             .get(*idx_map.get("BALANCE").unwrap())
-            .and_then(|s| s.replace('.', "").replace(',', "").parse::<f64>().ok());
+            .and_then(|s| s.replace('.', "").replace(',', ".").parse::<f64>().ok());
         let curr = record
             .get(*idx_map.get("CURRENCY").unwrap())
             .map(String::from);
         let amount = record
             .get(*idx_map.get("AMOUNT").unwrap())
-            .and_then(|s| s.replace('.', "").replace(',', "").parse::<f64>().ok());
+            .and_then(|s| s.replace('.', "").replace(',', ".").parse::<f64>().ok());
 
         let text = record.get(*idx_map.get("TEXT").unwrap()).map(String::from);
         let purpose = record
