@@ -1,9 +1,12 @@
 use axum::response::IntoResponse;
+use csv::Trim;
 use diesel::prelude::*;
 use diesel::upsert::*;
 use diesel::PgConnection;
 use encoding_rs::WINDOWS_1252;
 use encoding_rs_io::DecodeReaderBytesBuilder;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::env;
 use std::io::{BufRead, BufReader};
 
@@ -41,18 +44,27 @@ pub(crate) async fn data(text: String) -> StatusCode {
             .build(bytes.as_slice()),
     );
     // make this configurable?
-    for _ in 0..11 {
+    for _ in 0..12 {
         let mut skipped = String::new();
         let _ = buf_reader.read_line(&mut skipped);
         trace!("skipping: {}", skipped);
     }
-    let mut csv_reader = ReaderBuilder::new().delimiter(b';').from_reader(buf_reader);
+    let csv_reader = ReaderBuilder::new()
+        .delimiter(b';')
+        .has_headers(true)
+        .flexible(true)
+        .trim(Trim::All)
+        .from_reader(buf_reader);
 
-    let iter = csv_reader.deserialize::<CsvRow>();
-    let db_rows = iter
-        .filter_map(|row| {
+    let parsed_db_rows = csv_reader.into_records()
+        .map(|row| {
             if let Ok(ir) = row {
-                Some(Model::from(ir))
+                let csv_row:Result<CsvRow, _> = ir.try_into();
+                if let Err(e) = csv_row {
+                    error!("{:?}", e);
+                    return None;
+                }
+                Some(Model::from(csv_row.unwrap()))
             } else {
                 // Logging
                 warn!("Parsing error: {:?}", row);
@@ -61,10 +73,31 @@ pub(crate) async fn data(text: String) -> StatusCode {
         })
         .collect::<Vec<_>>();
     // add labels (Dumb ml) https://docs.rs/linfa/0.6.0/linfa/?search=
+    if parsed_db_rows.iter().any(Option::is_none) {
+        return StatusCode::INTERNAL_SERVER_ERROR;
+    }
+    let db_rows = parsed_db_rows
+        .iter()
+        .map(|o| o.as_ref().unwrap())
+        .collect::<Vec<_>>();
 
     if log_enabled!(log::Level::Trace) {
         for ele in &db_rows {
             trace!("Upsert: {:?}", ele);
+        }
+        let data_len = db_rows.len();
+        let set_id = db_rows.iter().map(|r| r.id).collect::<HashSet<_>>();
+        if set_id.len() != data_len {
+            trace!("{} duplicated keys", data_len - set_id.len());
+            let mut map: HashMap<i64, Vec<&Model>> = HashMap::new();
+            for e in &db_rows {
+                map.entry(e.id).or_insert(Vec::new()).push(e);
+            }
+            let dups = map.values().filter(|v| v.len() > 1).collect::<Vec<_>>();
+            trace!("Filtered {}", dups.len());
+            for dup in dups {
+                trace!("Duplicated rows:\n\t{:?}\n\t{:?}", dup[0], dup[1])
+            }
         }
     }
     let conn = PgConnection::establish(&database_url);
@@ -81,7 +114,10 @@ pub(crate) async fn data(text: String) -> StatusCode {
         .execute(&mut conn.unwrap());
     match result {
         Ok(n_bytes) => info!("Inserted/Updated {} row", n_bytes),
-        Err(e) => error!("Insert failed! {:?}", e),
+        Err(e) => {
+            error!("Insert failed! {:?}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        }
     }
 
     StatusCode::NO_CONTENT

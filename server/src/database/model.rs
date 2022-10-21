@@ -5,7 +5,7 @@ use diesel::prelude::*;
 #[derive(Debug, Queryable, Insertable)]
 #[diesel(table_name = transactions)]
 pub struct Model {
-    id: i64,
+    pub id: i64,
     reservation: NaiveDate,
     receiver: String,
     tags: Vec<Option<String>>,
