@@ -96,8 +96,8 @@ impl TryFrom<StringRecord> for CsvRow {
             .get(*idx_map.get("TAGS").unwrap())
             .map(|s| {
                 s.split('#')
+                    .map(str::trim)
                     .map(String::from)
-                    .map(|s| s.replace('\r', "").replace('\n', ""))
                     .filter(|s| !s.is_empty())
                     .collect::<Vec<_>>()
             })
