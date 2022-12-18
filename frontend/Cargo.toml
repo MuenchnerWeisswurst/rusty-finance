@@ -11,7 +11,6 @@ gloo = "0.8"
 js-sys = "0.3"
 log = "0.4.6"
 wasm-logger = "0.2.0"
-reqwest = { version = "0.11.12", features = ["blocking"] }
 console_error_panic_hook = "0.1.7"
 wasm-bindgen-futures = "0.4.33"
 wasm-bindgen = "0.2.83"

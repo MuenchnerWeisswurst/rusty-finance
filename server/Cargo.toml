@@ -13,7 +13,6 @@ tokio = { version = "1.21.2", features = ["full"] }
 tower = "0.4.13"
 tower-http = { version = "0.3.4", features = ["full"] }
 tracing = "0.1.37"
-tracing-subscriber = "0.3.16"
 csv = "1.1"
 chrono =  "0.4.22"
 encoding_rs_io = "0.1.7"
@@ -22,4 +21,4 @@ diesel = { version = "2.0.0", features = ["postgres", "chrono"] }
 dotenvy = "0.15"
 pretty_env_logger = "0.4.0"
 anyhow = "1.0.66"
-phf = { version = "0.11.1", features = ["macros"] }
+phf = { version = "0.10.1", features = ["macros"] }
